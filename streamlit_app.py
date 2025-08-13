@@ -12,7 +12,7 @@ from openai import OpenAI
 # ------------- Config básica -------------
 st.set_page_config(page_title="Dr_C • MVP RAG", page_icon="🌿", layout="wide")
 APP_LANG = os.getenv("APP_LANG", "pt")
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = OpenAI()
 
 # ------------- UI helpers -------------
 def T(pt, en):
