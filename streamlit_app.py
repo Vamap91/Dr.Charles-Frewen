@@ -7,46 +7,42 @@ import streamlit as st
 from pypdf import PdfReader
 from openai import OpenAI
 
-# ---------------- Config & Client ----------------
+# ================== CONFIGURAÇÃO ==================
 st.set_page_config(page_title="Dr_C • MVP RAG", page_icon="🌿", layout="wide")
 
-# Idioma inicial vindo dos Secrets, com seletor no sidebar
-DEFAULT_LANG = st.secrets.get("APP_LANG", "pt").strip().lower() if st.secrets.get("APP_LANG") else "pt"
-lang = st.sidebar.radio("Language / Idioma", options=["pt", "en"], index=0 if DEFAULT_LANG == "pt" else 1)
+# Cliente OpenAI (lendo a chave de Settings → Secrets)
+api_key = st.secrets["OPENAI_API_KEY"].strip()
+os.environ["OPENAI_API_KEY"] = api_key
+client = OpenAI(api_key=api_key)
 
-def T(pt, en):
-    return pt if lang == "pt" else en
+# Idioma inicial (lido de Secrets ou padrão pt)
+DEFAULT_LANG = st.secrets.get("APP_LANG", "pt").strip().lower()
+lang = st.sidebar.radio("Idioma / Language", ["pt", "en"], index=0 if DEFAULT_LANG == "pt" else 1)
+def T(pt, en): return pt if lang == "pt" else en
 
-# Cliente OpenAI pega a chave direto de Settings → Secrets (OPENAI_API_KEY)
-client = OpenAI()
-
+# ================== INTERFACE ==================
 st.title("🌿 Dr_C — MVP (Fase 1)")
 st.caption(T(
-    "Avatar de biodiversidade (MVP): responde com base no acervo interno enviado por você.",
-    "Biodiversity avatar (MVP): answers based on your uploaded internal corpus."
+    "Avatar de biodiversidade (MVP): responde com base no acervo interno enviado.",
+    "Biodiversity avatar (MVP): answers based on the uploaded internal corpus."
 ))
 
-# ---------------- Embeddings & Chunking ----------------
-EMBED_MODEL = "text-embedding-3-small"  # custo baixo, qualidade boa p/ RAG
+# ================== EMBEDDINGS ==================
+EMBED_MODEL = "text-embedding-3-small"
 ENCODER = tiktoken.get_encoding("cl100k_base")
 
 def count_tokens(text: str) -> int:
     return len(ENCODER.encode(text))
 
 def chunk_text(text: str, max_tokens: int = 500, overlap_tokens: int = 50):
-    """Divide texto em blocos ~max_tokens com pequeno overlap."""
     toks = ENCODER.encode(text)
-    chunks = []
-    start = 0
+    chunks, start = [], 0
     while start < len(toks):
         end = min(start + max_tokens, len(toks))
-        chunk = ENCODER.decode(toks[start:end])
-        chunks.append(chunk)
+        chunks.append(ENCODER.decode(toks[start:end]))
         start = end - overlap_tokens
-        if start < 0:
-            start = 0
-        if start >= len(toks):
-            break
+        if start < 0: start = 0
+        if start >= len(toks): break
     return chunks
 
 def embed_texts(texts: list[str]) -> np.ndarray:
@@ -55,153 +51,96 @@ def embed_texts(texts: list[str]) -> np.ndarray:
     return vecs
 
 def normalize(vecs: np.ndarray) -> np.ndarray:
-    norms = np.linalg.norm(vecs, axis=1, keepdims=True) + 1e-12
-    return vecs / norms
+    return vecs / (np.linalg.norm(vecs, axis=1, keepdims=True) + 1e-12)
 
-# ---------------- PDF Ingestion ----------------
+# ================== PDF EXTRACTION ==================
 def extract_text_from_pdf(file) -> str:
     reader = PdfReader(file)
-    all_text = []
-    for page in reader.pages:
-        txt = page.extract_text() or ""
-        all_text.append(txt)
-    return "\n".join(all_text)
+    return "\n".join(page.extract_text() or "" for page in reader.pages)
 
-# ---------------- FAISS Store ----------------
-INDEX_PATH = "faiss.index"
-META_PATH  = "meta.pkl"
+# ================== FAISS STORE ==================
+INDEX_PATH, META_PATH = "faiss.index", "meta.pkl"
 
 @st.cache_resource(show_spinner=False)
 def load_store():
     if os.path.exists(INDEX_PATH) and os.path.exists(META_PATH):
         index = faiss.read_index(INDEX_PATH)
-        with open(META_PATH, "rb") as f:
-            meta = pickle.load(f)
+        with open(META_PATH, "rb") as f: meta = pickle.load(f)
         return index, meta
-    # Se não existir, cria vazio
-    d = 1536  # dim do text-embedding-3-small
-    index = faiss.IndexFlatIP(d)  # Similaridade por produto interno (com vetores normalizados)
-    meta = []
-    return index, meta
+    d = 1536
+    return faiss.IndexFlatIP(d), []
 
 @st.cache_resource(show_spinner=False)
 def save_store(index, meta):
     faiss.write_index(index, INDEX_PATH)
-    with open(META_PATH, "wb") as f:
-        pickle.dump(meta, f)
+    with open(META_PATH, "wb") as f: pickle.dump(meta, f)
 
 index, meta = load_store()
 
-# ---------------- Upload & Index ----------------
+# ================== UPLOAD & INDEX ==================
 st.subheader(T("1) Suba o conteúdo", "1) Upload your content"))
-uploaded = st.file_uploader(
-    T("Arraste PDFs/artigos (Charles)", "Drag & drop PDFs/articles (Charles)"),
-    type=["pdf"], accept_multiple_files=True
-)
+uploaded = st.file_uploader(T("Arraste PDFs/artigos", "Drag & drop PDFs/articles"),
+                             type=["pdf"], accept_multiple_files=True)
 
-colA, colB = st.columns([1,1])
+colA, colB = st.columns(2)
 with colA:
     if st.button(T("Indexar arquivos enviados", "Index uploaded files"), use_container_width=True):
         if not uploaded:
             st.warning(T("Envie ao menos 1 PDF.", "Please upload at least one PDF."))
         else:
             new_chunks, new_meta = [], []
-            with st.spinner(T("Lendo e chunkando documentos...", "Reading & chunking documents...")):
+            with st.spinner(T("Processando documentos...", "Processing documents...")):
                 for f in uploaded:
                     raw = extract_text_from_pdf(f)
                     chunks = chunk_text(raw, max_tokens=520, overlap_tokens=60)
                     for ch in chunks:
                         if ch.strip():
                             new_chunks.append(ch)
-                            new_meta.append({"source": f.name, "snippet": ch[:180].replace("\n"," ")})
-            if not new_chunks:
-                st.error(T("Nada para indexar.", "Nothing to index."))
-            else:
-                with st.spinner(T("Gerando embeddings e atualizando índice...", "Embedding & updating index...")):
-                    vecs = embed_texts(new_chunks)
-                    vecs = normalize(vecs)
-                    # Se índice estava vazio, reabra com a dimensão correta
-                    if index.ntotal == 0:
-                        d = vecs.shape[1]
-                        index = faiss.IndexFlatIP(d)
-                    index.add(vecs)
-                    meta.extend(new_meta)
-                    save_store(index, meta)
+                            new_meta.append({"source": f.name, "snippet": ch[:180].replace("\n", " ")})
+            if new_chunks:
+                vecs = normalize(embed_texts(new_chunks))
+                if index.ntotal == 0:
+                    d = vecs.shape[1]
+                    index = faiss.IndexFlatIP(d)
+                index.add(vecs)
+                meta.extend(new_meta)
+                save_store(index, meta)
                 st.success(T("Indexação concluída.", "Indexing complete."))
+            else:
+                st.error(T("Nada para indexar.", "Nothing to index."))
 
 with colB:
-    if st.button(T("Limpar base (reset)", "Clear corpus (reset)"), type="secondary", use_container_width=True):
-        try:
-            if os.path.exists(INDEX_PATH): os.remove(INDEX_PATH)
-            if os.path.exists(META_PATH):  os.remove(META_PATH)
-            st.success(T("Base limpa. Recarregue a página.", "Corpus cleared. Reload the page."))
-        except Exception as e:
-            st.error(str(e))
+    if st.button(T("Limpar base", "Clear corpus"), type="secondary", use_container_width=True):
+        if os.path.exists(INDEX_PATH): os.remove(INDEX_PATH)
+        if os.path.exists(META_PATH): os.remove(META_PATH)
+        st.success(T("Base limpa. Recarregue a página.", "Corpus cleared. Reload the page."))
 
-st.caption(T(
-    "Dica: comece por 3–5 PDFs mais representativos. Depois amplie.",
-    "Tip: start with 3–5 representative PDFs. Expand later."
-))
-
-# ---------------- Retrieval & Answer ----------------
+# ================== SEARCH & ANSWER ==================
 st.subheader(T("2) Pergunte ao Dr_C", "2) Ask Dr_C"))
-q = st.text_input(T("Sua pergunta", "Your question"),
-                  placeholder=T("Ex.: Soluções baseadas na natureza para restauração de matas ciliares?",
-                                "e.g., Nature-based solutions for riparian forest restoration?"))
+q = st.text_input(T("Sua pergunta", "Your question"))
 top_k = st.slider(T("Fontes (top_k)", "Sources (top_k)"), 2, 8, 4)
 
 def search(query, k=4):
-    if index.ntotal == 0:
-        return []
-    qvec = embed_texts([query])
-    qvec = normalize(qvec)
+    if index.ntotal == 0: return []
+    qvec = normalize(embed_texts([query]))
     D, I = index.search(qvec, k)
-    results = []
-    for idx in I[0]:
-        if 0 <= idx < len(meta):
-            results.append(meta[idx])
-    return results
+    return [meta[idx] for idx in I[0] if 0 <= idx < len(meta)]
 
-SYSTEM_PT = (
-    "Você é o Dr_C, um especialista em biodiversidade. "
-    "Sempre responda trazendo o tema para natureza, conservação e soluções baseadas na biodiversidade. "
-    "Baseie-se estritamente nas fontes fornecidas (trechos e PDFs indexados). "
-    "Quando houver incerteza, declare e peça mais contexto. "
-    "Cite as fontes ao final (arquivo e breve trecho)."
-)
-SYSTEM_EN = (
-    "You are Dr_C, a biodiversity expert. "
-    "Always bring the discussion back to nature, conservation, and biodiversity-based solutions. "
-    "Ground answers strictly in the provided sources (snippets and indexed PDFs). "
-    "When uncertain, say so and ask for more context. "
-    "Cite sources at the end (file and brief snippet)."
-)
+SYSTEM_PT = ("Você é o Dr_C, especialista em biodiversidade. "
+             "Responda sempre trazendo o foco para conservação e soluções baseadas na natureza, "
+             "usando apenas as fontes fornecidas e citando-as no final.")
+SYSTEM_EN = ("You are Dr_C, a biodiversity expert. "
+             "Always bring the focus to conservation and nature-based solutions, "
+             "using only the provided sources and citing them at the end.")
 
-def answer_with_sources(query, sources, lang_code="pt"):
-    system_msg = SYSTEM_PT if lang_code == "pt" else SYSTEM_EN
-    context_blocks = []
-    for s in sources:
-        block = f"[Source: {s.get('source','?')}]\n{ s.get('snippet','') }\n"
-        context_blocks.append(block)
-    context = "\n\n".join(context_blocks)
-
-    user_prompt = (
-        f"Pergunta: {query}\n\n"
-        f"Contexto (trechos relevantes):\n{context}\n\n"
-        "Responda de modo didático e objetivo. No final, liste as fontes usadas."
-        if lang_code == "pt"
-        else
-        f"Question: {query}\n\n"
-        f"Context (relevant snippets):\n{context}\n\n"
-        "Answer clearly and concisely. At the end, list the sources used."
-    )
-
+def answer_with_sources(query, sources):
+    system_msg = SYSTEM_PT if lang == "pt" else SYSTEM_EN
+    context = "\n\n".join(f"[{s['source']}]\n{s['snippet']}" for s in sources)
+    user_prompt = f"{query}\n\n{context}"
     resp = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[
-            {"role":"system", "content": system_msg},
-            {"role":"user", "content": user_prompt}
-        ],
+        messages=[{"role":"system","content":system_msg},
+                  {"role":"user","content":user_prompt}],
         temperature=0.2
     )
     return resp.choices[0].message.content
@@ -210,15 +149,11 @@ if st.button(T("Responder", "Answer"), type="primary", use_container_width=True)
     if index.ntotal == 0:
         st.warning(T("Base vazia. Faça upload e indexe antes.", "Corpus empty. Upload & index first."))
     else:
-        with st.spinner(T("Buscando fontes e gerando resposta...", "Retrieving & generating...")):
+        with st.spinner(T("Buscando e respondendo...", "Searching and answering...")):
             srcs = search(q, k=top_k)
-            ans = answer_with_sources(q, srcs, lang_code=lang)
+            ans = answer_with_sources(q, srcs)
         st.markdown("### " + T("Resposta", "Answer"))
         st.write(ans)
         with st.expander(T("Fontes usadas", "Sources used")):
             for s in srcs:
-                st.write(f"- **{s.get('source','?')}** — “{s.get('snippet','')[:200]}...”")
-        st.caption(T(
-            "Observação: este é um MVP. O agente responde apenas com base no acervo enviado.",
-            "Note: this is an MVP. The agent only answers from the uploaded corpus."
-        ))
+                st.write(f"- **{s['source']}** — “{s['snippet'][:200]}...”")
