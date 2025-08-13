@@ -1,6 +1,4 @@
 import os
-import io
-import time
 import pickle
 import faiss
 import numpy as np
@@ -9,32 +7,34 @@ import streamlit as st
 from pypdf import PdfReader
 from openai import OpenAI
 
-# ------------- Config básica -------------
+# ---------------- Config & Client ----------------
 st.set_page_config(page_title="Dr_C • MVP RAG", page_icon="🌿", layout="wide")
-APP_LANG = os.getenv("APP_LANG", "pt")
-client = OpenAI()
 
-# ------------- UI helpers -------------
+# Idioma inicial vindo dos Secrets, com seletor no sidebar
+DEFAULT_LANG = st.secrets.get("APP_LANG", "pt").strip().lower() if st.secrets.get("APP_LANG") else "pt"
+lang = st.sidebar.radio("Language / Idioma", options=["pt", "en"], index=0 if DEFAULT_LANG == "pt" else 1)
+
 def T(pt, en):
-    return pt if APP_LANG == "pt" else en
+    return pt if lang == "pt" else en
+
+# Cliente OpenAI pega a chave direto de Settings → Secrets (OPENAI_API_KEY)
+client = OpenAI()
 
 st.title("🌿 Dr_C — MVP (Fase 1)")
 st.caption(T(
-    "Avatar de biodiversidade (MVP): responde com base no seu acervo interno.",
-    "Biodiversity avatar (MVP): answers based on your internal corpus."
+    "Avatar de biodiversidade (MVP): responde com base no acervo interno enviado por você.",
+    "Biodiversity avatar (MVP): answers based on your uploaded internal corpus."
 ))
 
-# ------------- Chunking & Embeddings -------------
-EMBED_MODEL = "text-embedding-3-small"   # custo baixo e bom p/ RAG
+# ---------------- Embeddings & Chunking ----------------
+EMBED_MODEL = "text-embedding-3-small"  # custo baixo, qualidade boa p/ RAG
 ENCODER = tiktoken.get_encoding("cl100k_base")
 
 def count_tokens(text: str) -> int:
     return len(ENCODER.encode(text))
 
 def chunk_text(text: str, max_tokens: int = 500, overlap_tokens: int = 50):
-    """
-    Divide texto em blocos ~max_tokens com leve overlap.
-    """
+    """Divide texto em blocos ~max_tokens com pequeno overlap."""
     toks = ENCODER.encode(text)
     chunks = []
     start = 0
@@ -54,7 +54,11 @@ def embed_texts(texts: list[str]) -> np.ndarray:
     vecs = np.array([d.embedding for d in resp.data], dtype="float32")
     return vecs
 
-# ------------- PDF/Text ingestion -------------
+def normalize(vecs: np.ndarray) -> np.ndarray:
+    norms = np.linalg.norm(vecs, axis=1, keepdims=True) + 1e-12
+    return vecs / norms
+
+# ---------------- PDF Ingestion ----------------
 def extract_text_from_pdf(file) -> str:
     reader = PdfReader(file)
     all_text = []
@@ -63,7 +67,7 @@ def extract_text_from_pdf(file) -> str:
         all_text.append(txt)
     return "\n".join(all_text)
 
-# ------------- FAISS store -------------
+# ---------------- FAISS Store ----------------
 INDEX_PATH = "faiss.index"
 META_PATH  = "meta.pkl"
 
@@ -74,9 +78,9 @@ def load_store():
         with open(META_PATH, "rb") as f:
             meta = pickle.load(f)
         return index, meta
-    # store vazio
+    # Se não existir, cria vazio
     d = 1536  # dim do text-embedding-3-small
-    index = faiss.IndexFlatIP(d)  # cosine via inner product com vetores normalizados
+    index = faiss.IndexFlatIP(d)  # Similaridade por produto interno (com vetores normalizados)
     meta = []
     return index, meta
 
@@ -86,18 +90,15 @@ def save_store(index, meta):
     with open(META_PATH, "wb") as f:
         pickle.dump(meta, f)
 
-def normalize(vecs: np.ndarray) -> np.ndarray:
-    norms = np.linalg.norm(vecs, axis=1, keepdims=True) + 1e-12
-    return vecs / norms
+index, meta = load_store()
 
-# ------------- Ingest UI -------------
+# ---------------- Upload & Index ----------------
 st.subheader(T("1) Suba o conteúdo", "1) Upload your content"))
 uploaded = st.file_uploader(
-    T("Arraste PDFs/artigos do Charles", "Drag & drop Charles' PDFs/articles"),
+    T("Arraste PDFs/artigos (Charles)", "Drag & drop PDFs/articles (Charles)"),
     type=["pdf"], accept_multiple_files=True
 )
 
-index, meta = load_store()
 colA, colB = st.columns([1,1])
 with colA:
     if st.button(T("Indexar arquivos enviados", "Index uploaded files"), use_container_width=True):
@@ -119,11 +120,10 @@ with colA:
                 with st.spinner(T("Gerando embeddings e atualizando índice...", "Embedding & updating index...")):
                     vecs = embed_texts(new_chunks)
                     vecs = normalize(vecs)
-                    # se index vazio, recria com a dimensão correta
+                    # Se índice estava vazio, reabra com a dimensão correta
                     if index.ntotal == 0:
                         d = vecs.shape[1]
-                        new_index = faiss.IndexFlatIP(d)
-                        index = new_index
+                        index = faiss.IndexFlatIP(d)
                     index.add(vecs)
                     meta.extend(new_meta)
                     save_store(index, meta)
@@ -139,16 +139,15 @@ with colB:
             st.error(str(e))
 
 st.caption(T(
-    "Dica: comece por 3–5 PDFs mais representativos. Depois amplia.",
+    "Dica: comece por 3–5 PDFs mais representativos. Depois amplie.",
     "Tip: start with 3–5 representative PDFs. Expand later."
 ))
 
-# ------------- Retrieval + Answering -------------
+# ---------------- Retrieval & Answer ----------------
 st.subheader(T("2) Pergunte ao Dr_C", "2) Ask Dr_C"))
-q = st.text_input(T("Sua pergunta", "Your question"), placeholder=T(
-    "Ex.: Quais soluções baseadas na natureza para restauração de matas ciliares?",
-    "e.g., Which nature-based solutions support riparian forest restoration?"
-))
+q = st.text_input(T("Sua pergunta", "Your question"),
+                  placeholder=T("Ex.: Soluções baseadas na natureza para restauração de matas ciliares?",
+                                "e.g., Nature-based solutions for riparian forest restoration?"))
 top_k = st.slider(T("Fontes (top_k)", "Sources (top_k)"), 2, 8, 4)
 
 def search(query, k=4):
@@ -178,8 +177,8 @@ SYSTEM_EN = (
     "Cite sources at the end (file and brief snippet)."
 )
 
-def answer_with_sources(query, sources, lang="pt"):
-    system_msg = SYSTEM_PT if lang == "pt" else SYSTEM_EN
+def answer_with_sources(query, sources, lang_code="pt"):
+    system_msg = SYSTEM_PT if lang_code == "pt" else SYSTEM_EN
     context_blocks = []
     for s in sources:
         block = f"[Source: {s.get('source','?')}]\n{ s.get('snippet','') }\n"
@@ -190,7 +189,7 @@ def answer_with_sources(query, sources, lang="pt"):
         f"Pergunta: {query}\n\n"
         f"Contexto (trechos relevantes):\n{context}\n\n"
         "Responda de modo didático e objetivo. No final, liste as fontes usadas."
-        if lang == "pt"
+        if lang_code == "pt"
         else
         f"Question: {query}\n\n"
         f"Context (relevant snippets):\n{context}\n\n"
@@ -213,7 +212,7 @@ if st.button(T("Responder", "Answer"), type="primary", use_container_width=True)
     else:
         with st.spinner(T("Buscando fontes e gerando resposta...", "Retrieving & generating...")):
             srcs = search(q, k=top_k)
-            ans = answer_with_sources(q, srcs, lang=APP_LANG)
+            ans = answer_with_sources(q, srcs, lang_code=lang)
         st.markdown("### " + T("Resposta", "Answer"))
         st.write(ans)
         with st.expander(T("Fontes usadas", "Sources used")):
@@ -221,5 +220,5 @@ if st.button(T("Responder", "Answer"), type="primary", use_container_width=True)
                 st.write(f"- **{s.get('source','?')}** — “{s.get('snippet','')[:200]}...”")
         st.caption(T(
             "Observação: este é um MVP. O agente responde apenas com base no acervo enviado.",
-            "Note: this is an MVP. The agent only answers from uploaded corpus."
+            "Note: this is an MVP. The agent only answers from the uploaded corpus."
         ))
