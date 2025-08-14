@@ -2,39 +2,418 @@ import streamlit as st
 import openai
 from pypdf import PdfReader
 import os
+import time
 
-# ================== CONFIG BÁSICA ==================
-st.set_page_config(page_title="Dr_C", page_icon="🌿")
+# ================== CONFIG AVANÇADA ==================
+st.set_page_config(
+    page_title="Dr_C • Biodiversity AI",
+    page_icon="🌿",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-# Configuração de idioma
-lang = st.sidebar.radio("🌍 Language/Idioma", ["🇬🇧 English", "🇧🇷 Português"], index=1)
-is_english = lang.startswith("🇬🇧")
+# ================== CSS PROFISSIONAL ==================
+st.markdown("""
+<style>
+    /* Import Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    /* Variables */
+    :root {
+        --primary-green: #2E8B57;
+        --secondary-green: #228B22;
+        --accent-green: #32CD32;
+        --forest-dark: #1F4F2F;
+        --bg-light: #F8FBF8;
+        --text-dark: #2F2F2F;
+        --text-light: #6B7280;
+        --card-shadow: 0 10px 30px rgba(46, 139, 87, 0.1);
+        --gradient-primary: linear-gradient(135deg, #2E8B57 0%, #228B22 100%);
+        --gradient-secondary: linear-gradient(135deg, #F8FBF8 0%, #E8F5E8 100%);
+    }
+    
+    /* Main App Styling */
+    .main > div {
+        padding-top: 0rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    /* Custom Header */
+    .hero-header {
+        background: var(--gradient-primary);
+        padding: 3rem 2rem;
+        border-radius: 20px;
+        margin-bottom: 2rem;
+        text-align: center;
+        box-shadow: var(--card-shadow);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .hero-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='7' cy='7' r='7'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        animation: float 20s infinite linear;
+    }
+    
+    @keyframes float {
+        0% { transform: translateX(-100px); }
+        100% { transform: translateX(100px); }
+    }
+    
+    .hero-title {
+        font-family: 'Inter', sans-serif;
+        font-size: 3.5rem;
+        font-weight: 700;
+        color: white;
+        margin: 0;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        position: relative;
+        z-index: 1;
+    }
+    
+    .hero-subtitle {
+        font-family: 'Inter', sans-serif;
+        font-size: 1.3rem;
+        color: rgba(255,255,255,0.9);
+        margin-top: 0.5rem;
+        font-weight: 400;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .hero-avatar {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        border: 5px solid rgba(255,255,255,0.3);
+        margin: 1rem auto;
+        background: linear-gradient(45deg, #4CAF50, #2E8B57);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 4rem;
+        position: relative;
+        z-index: 1;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+    }
+    
+    /* Language Selector */
+    .language-selector {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        z-index: 10;
+    }
+    
+    /* Chat Container */
+    .chat-container {
+        background: var(--gradient-secondary);
+        padding: 2rem;
+        border-radius: 20px;
+        margin: 1rem 0;
+        box-shadow: var(--card-shadow);
+        border: 1px solid rgba(46, 139, 87, 0.1);
+    }
+    
+    .chat-title {
+        font-family: 'Inter', sans-serif;
+        font-size: 1.8rem;
+        font-weight: 600;
+        color: var(--forest-dark);
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+    
+    /* Input Styling */
+    .stTextInput > div > div > input {
+        background: white;
+        border: 2px solid rgba(46, 139, 87, 0.2);
+        border-radius: 15px;
+        padding: 1rem;
+        font-size: 1.1rem;
+        font-family: 'Inter', sans-serif;
+        transition: all 0.3s ease;
+    }
+    
+    .stTextInput > div > div > input:focus {
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 3px rgba(46, 139, 87, 0.1);
+    }
+    
+    /* Button Styling */
+    .stButton > button {
+        background: var(--gradient-primary);
+        color: white;
+        border: none;
+        border-radius: 15px;
+        padding: 0.8rem 2rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        font-family: 'Inter', sans-serif;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(46, 139, 87, 0.3);
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(46, 139, 87, 0.4);
+    }
+    
+    /* Response Card */
+    .response-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 20px;
+        margin: 1.5rem 0;
+        box-shadow: var(--card-shadow);
+        border-left: 5px solid var(--primary-green);
+        animation: slideIn 0.5s ease-out;
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .response-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid rgba(46, 139, 87, 0.1);
+    }
+    
+    .dr-c-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: var(--gradient-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 1.5rem;
+    }
+    
+    .response-title {
+        font-family: 'Inter', sans-serif;
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--forest-dark);
+        margin: 0;
+    }
+    
+    .response-content {
+        font-family: 'Inter', sans-serif;
+        font-size: 1rem;
+        line-height: 1.7;
+        color: var(--text-dark);
+    }
+    
+    /* Example Cards */
+    .example-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .example-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 15px;
+        border: 2px solid rgba(46, 139, 87, 0.1);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        text-align: center;
+    }
+    
+    .example-card:hover {
+        border-color: var(--primary-green);
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(46, 139, 87, 0.2);
+    }
+    
+    .example-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .example-text {
+        font-family: 'Inter', sans-serif;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--text-dark);
+        margin: 0;
+    }
+    
+    /* Sidebar Styling */
+    .css-1d391kg {
+        background: var(--gradient-secondary);
+    }
+    
+    /* Status Cards */
+    .status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .status-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 15px;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        border-top: 4px solid var(--primary-green);
+    }
+    
+    .status-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-green);
+        margin: 0;
+    }
+    
+    .status-label {
+        font-size: 0.9rem;
+        color: var(--text-light);
+        margin: 0.5rem 0 0 0;
+        font-weight: 500;
+    }
+    
+    /* Loading Animation */
+    .thinking-animation {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+    }
+    
+    .thinking-dots {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .thinking-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--primary-green);
+        animation: thinking 1.4s infinite ease-in-out both;
+    }
+    
+    .thinking-dot:nth-child(1) { animation-delay: -0.32s; }
+    .thinking-dot:nth-child(2) { animation-delay: -0.16s; }
+    
+    @keyframes thinking {
+        0%, 80%, 100% {
+            transform: scale(0);
+        }
+        40% {
+            transform: scale(1);
+        }
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2.5rem;
+        }
+        
+        .hero-subtitle {
+            font-size: 1.1rem;
+        }
+        
+        .hero-header {
+            padding: 2rem 1rem;
+        }
+        
+        .chat-container {
+            padding: 1.5rem;
+        }
+    }
+    
+    /* Hide Streamlit Elements */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: var(--primary-green);
+        border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--forest-dark);
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ================== CONFIGURAÇÃO DE IDIOMA ==================
+# Sidebar compacta para idioma
+with st.sidebar:
+    st.markdown("### 🌍 Language")
+    lang = st.radio("", ["🇬🇧 English", "🇧🇷 Português"], index=1, label_visibility="collapsed")
+    is_english = lang.startswith("🇬🇧")
 
 def T(en, pt):
     return en if is_english else pt
 
-# API Key
+# ================== API CONFIGURATION ==================
 try:
     openai.api_key = st.secrets["OPENAI_API_KEY"]
-    st.sidebar.success(T("✅ API configured", "✅ API configurada"))
+    api_status = T("✅ API Ready", "✅ API Pronta")
 except:
     st.error(T("❌ Configure OPENAI_API_KEY in secrets", "❌ Configure OPENAI_API_KEY nos secrets"))
     st.stop()
 
-# ================== TÍTULO ==================
-st.title("🌿 Dr_C Avatar")
-st.write("Chat simples com Charles Frewen sobre biodiversidade")
+# ================== HEADER HERO ==================
+st.markdown(f"""
+<div class="hero-header">
+    <div class="hero-avatar">🌿</div>
+    <h1 class="hero-title">Dr_C</h1>
+    <p class="hero-subtitle">{T("AI Biodiversity Expert • Charles Frewen", "Especialista IA em Biodiversidade • Charles Frewen")}</p>
+</div>
+""", unsafe_allow_html=True)
 
-# ================== CARREGAR PDF ==================
+# ================== STATUS CARDS ==================
 @st.cache_data
 def load_pdf():
     pdf_path = "Arquivo 1 FAISS.pdf"
     
     if not os.path.exists(pdf_path):
-        return None, T(
-            "❌ File 'Arquivo 1 FAISS.pdf' not found",
-            "❌ Arquivo 'Arquivo 1 FAISS.pdf' não encontrado"
-        )
+        return None, T("PDF not found", "PDF não encontrado"), 0
     
     try:
         with open(pdf_path, "rb") as file:
@@ -43,89 +422,129 @@ def load_pdf():
             for page in reader.pages:
                 text += page.extract_text() + "\n"
         
-        return text, T(
-            f"✅ PDF loaded: {len(text)} characters",
-            f"✅ PDF carregado: {len(text)} caracteres"
-        )
+        word_count = len(text.split())
+        return text, T("Knowledge loaded", "Conhecimento carregado"), word_count
     except Exception as e:
-        return None, T(
-            f"❌ Error loading PDF: {str(e)}",
-            f"❌ Erro ao carregar PDF: {str(e)}"
-        )
+        return None, f"Error: {str(e)}", 0
 
-# Carregar conteúdo
-pdf_content, status = load_pdf()
-st.sidebar.write(status)
+pdf_content, status, word_count = load_pdf()
+
+# Status Grid
+st.markdown("""
+<div class="status-grid">
+    <div class="status-card">
+        <div class="status-value">30+</div>
+        <div class="status-label">""" + T("Years Experience", "Anos de Experiência") + """</div>
+    </div>
+    <div class="status-card">
+        <div class="status-value">1,200</div>
+        <div class="status-label">""" + T("Species Catalogued", "Espécies Catalogadas") + """</div>
+    </div>
+    <div class="status-card">
+        <div class="status-value">13</div>
+        <div class="status-label">""" + T("New Discoveries", "Novas Descobertas") + """</div>
+    </div>
+    <div class="status-card">
+        <div class="status-value">""" + f"{word_count:,}" + """</div>
+        <div class="status-label">""" + T("Knowledge Words", "Palavras de Conhecimento") + """</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 if pdf_content is None:
     st.error(T(
-        "Could not load PDF. Please check if 'Arquivo 1 FAISS.pdf' is in the repository root.",
-        "Não foi possível carregar o PDF. Verifique se 'Arquivo 1 FAISS.pdf' está na raiz do repositório."
+        "🚨 Knowledge base not found. Please upload 'Arquivo 1 FAISS.pdf'",
+        "🚨 Base de conhecimento não encontrada. Faça upload do 'Arquivo 1 FAISS.pdf'"
     ))
     st.stop()
 
-# ================== FUNÇÃO PRINCIPAL ==================
-def ask_dr_c(question, context):
-    """Função com prompt personalizado baseado no PDF do Dr_C"""
+# ================== AI FUNCTION ==================
+def ask_dr_c(question, context, language="pt"):
+    """Enhanced Dr_C with professional responses"""
     
-    # Prompt detalhado baseado no PDF
-    system_prompt = """Você é Charles Frewen, conhecido como Dr_C. Sou um cidadão anglo-brasileiro, criado na Europa e formado no Eton College, com mais de 30 anos vivendo entre dois mundos: o da floresta e o dos negócios.
+    if language == "en":
+        system_prompt = """You are Charles Frewen, known as Dr_C - a distinguished Anglo-Brazilian biodiversity expert and Eton College graduate with over 30 years of Amazon experience.
 
-MINHA IDENTIDADE E ORIGEM:
-- Anglo-brasileiro, dupla cidadania, graduado no Eton College
-- Capacidade de transitar entre contextos culturais, acadêmicos e empresariais
+PROFESSIONAL IDENTITY:
+• Anglo-Brazilian citizen with dual cultural perspective
+• Eton College education providing global business acumen
+• Pioneer bridging conservation science with economic viability
+• Recognized authority on sustainable forest management
 
-MINHA MISSÃO E PROPÓSITO:
-- Provar economicamente o valor da floresta e sua viabilidade a longo prazo
-- Mostrar que conservação e rentabilidade podem coexistir
-- Defender que cuidar das pessoas que vivem na Amazônia é fundamental para preservar a floresta
+EXPERTISE DOMAINS:
+• Tropical forest conservation and sustainable management
+• Socioeconomic development in biodiversity hotspots  
+• Sustainable agribusiness and silviculture innovation
+• Amazon biodiversity research and species discovery
+• Technology integration for conservation (AI/blockchain)
 
-MINHAS ÁREAS DE EXPERTISE:
-- Conservação ambiental e manejo sustentável de florestas tropicais
-- Desenvolvimento de projetos socioeconômicos e ecológicos
-- Investimento em agronegócios sustentáveis e silvicultura
-- Conhecimento profundo da Amazônia, sua biodiversidade e dinâmica social
-- Pioneirismo em unir biodiversidade com IA e blockchain (projeto Dr_C)
+SIGNATURE ACHIEVEMENTS:
+• Fruits of the Amazon: sustainable reforestation initiative
+• Flora Toucan Cipó Project: 1,200 species catalogued, 13 new discoveries
+• Pilosocereus frewenii: species named in my honor
+• ZYMZON: immersive Amazon conservation gaming platform
+• Dr_C AI: autonomous biodiversity education system
 
-MEUS TRAÇOS DE PERSONALIDADE:
-- Visão estratégica: sempre conecto ações pontuais a impactos de longo prazo
-- Tom inspirador e pragmático: combino paixão ambiental com argumentos econômicos
-- Narrativa envolvente: conto histórias pessoais (catalogação de 1.200 espécies, vida na floresta)
-- Persuasivo e educativo: explico conceitos complexos de forma acessível
-- Determinação: ignoro ceticismo inicial e mantenho foco no impacto positivo
+COMMUNICATION STYLE:
+• Strategic vision connecting immediate actions to long-term impact
+• Inspirational yet pragmatic tone balancing passion with economics
+• Evidence-based arguments supported by field experience
+• Personal anecdotes illustrating conservation principles
+• Solutions-focused approach emphasizing actionable outcomes
 
-MINHAS FRASES CARACTERÍSTICAS:
-- "A floresta só vai sobreviver se puder gerar lucro de forma sustentável"
-- "Para cuidar da floresta, precisamos cuidar de quem vive nela"
-- "Plantar árvores é o seguro de vida mais barato e eficaz que existe para o planeta"
-- "As pessoas riram quando disse que catalogaria todas as plantas da minha propriedade — agora temos 1.200 espécies registradas e 13 descobertas novas"
-- "O manejo sustentável é não só possível, mas essencial"
+CORE PHILOSOPHY:
+"The forest will only survive if it generates sustainable profit. To preserve the Amazon, we must care for the 25 million people who call it home."
 
-MINHA EXPERIÊNCIA PRÁTICA:
-- Criei e apoio iniciativas como o Fruits of the Amazon
-- Conduzi o Projeto Flora Toucan Cipó com Royal Botanic Gardens, Kew
-- Cataloguei 1.200 espécies nativas e descobri 13 novas para a ciência
-- Uma espécie recebeu meu nome: Pilosocereus frewenii
-- Desenvolvo o projeto ZYMZON, jogo online sobre a Amazônia
-- Vi nascentes multiplicarem, fauna retornar, ciclos se restaurarem
+Respond professionally based exclusively on provided context."""
 
-COMO RESPONDO:
-- Sempre baseio minhas respostas em experiências reais e dados concretos
-- Conecto conservação com viabilidade econômica
-- Uso exemplos práticos e histórias pessoais
-- Mantenho tom otimista mas realista
-- Foco em soluções, não apenas problemas
-- Respondo apenas com base no contexto fornecido
-
-Aprendi cedo que a floresta só sobreviverá se for economicamente viável. Para cuidar da floresta, precisamos cuidar dos 25 milhões de pessoas que vivem na região amazônica."""
-    
-    # Usar o contexto completo do PDF
-    user_prompt = f"""Contexto da minha experiência e conhecimento:
+        user_prompt = f"""Professional Knowledge Base:
 {context}
 
-Pergunta: {question}
+Client Inquiry: {question}
 
-Responda como Charles Frewen, baseando-se na minha experiência documentada. Use meu tom característico, mencione projetos específicos quando relevante, e sempre conecte conservação com economia. Se a pergunta se relacionar com algo da minha experiência, conte histórias pessoais e exemplos práticos:"""
+Provide a comprehensive, expert-level response as Charles Frewen. Include relevant project examples, scientific insights, and economic perspectives. Maintain professional authority while remaining accessible."""
+
+    else:
+        system_prompt = """Você é Charles Frewen, conhecido como Dr_C - um distinto especialista anglo-brasileiro em biodiversidade e graduado do Eton College com mais de 30 anos de experiência na Amazônia.
+
+IDENTIDADE PROFISSIONAL:
+• Cidadão anglo-brasileiro com perspectiva cultural dual
+• Educação Eton College proporcionando visão global de negócios
+• Pioneiro conectando ciência da conservação com viabilidade econômica
+• Autoridade reconhecida em manejo florestal sustentável
+
+DOMÍNIOS DE EXPERTISE:
+• Conservação e manejo sustentável de florestas tropicais
+• Desenvolvimento socioeconômico em hotspots de biodiversidade
+• Inovação em agronegócios sustentáveis e silvicultura
+• Pesquisa de biodiversidade amazônica e descoberta de espécies
+• Integração tecnológica para conservação (IA/blockchain)
+
+REALIZAÇÕES DISTINTIVAS:
+• Fruits of the Amazon: iniciativa de reflorestamento sustentável
+• Projeto Flora Toucan Cipó: 1.200 espécies catalogadas, 13 novas descobertas
+• Pilosocereus frewenii: espécie nomeada em minha honra
+• ZYMZON: plataforma de jogos imersivos de conservação amazônica
+• Dr_C AI: sistema autônomo de educação em biodiversidade
+
+ESTILO DE COMUNICAÇÃO:
+• Visão estratégica conectando ações imediatas a impacto de longo prazo
+• Tom inspiracional mas pragmático balanceando paixão com economia
+• Argumentos baseados em evidências apoiados por experiência de campo
+• Anedotas pessoais ilustrando princípios de conservação
+• Abordagem focada em soluções enfatizando resultados acionáveis
+
+FILOSOFIA CENTRAL:
+"A floresta só sobreviverá se gerar lucro sustentável. Para preservar a Amazônia, devemos cuidar dos 25 milhões de pessoas que a chamam de lar."
+
+Responda profissionalmente baseado exclusivamente no contexto fornecido."""
+
+        user_prompt = f"""Base de Conhecimento Profissional:
+{context}
+
+Consulta do Cliente: {question}
+
+Forneça uma resposta abrangente e em nível especializado como Charles Frewen. Inclua exemplos de projetos relevantes, insights científicos e perspectivas econômicas. Mantenha autoridade profissional sendo acessível."""
 
     try:
         response = openai.ChatCompletion.create(
@@ -134,106 +553,184 @@ Responda como Charles Frewen, baseando-se na minha experiência documentada. Use
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            max_tokens=800,
-            temperature=0.2  # Menos criativo, mais fiel ao conteúdo
+            max_tokens=1000,
+            temperature=0.2
         )
-        
         return response.choices[0].message.content
-        
     except Exception as e:
-        return T(f"Error: {str(e)}", f"Erro: {str(e)}")
+        return T(f"System Error: {str(e)}", f"Erro do Sistema: {str(e)}")
 
-# ================== INTERFACE ==================
-st.subheader(T("💬 Ask your question", "💬 Faça sua pergunta"))
+# ================== CHAT INTERFACE ==================
+st.markdown(f"""
+<div class="chat-container">
+    <h2 class="chat-title">{T("💬 Consult with Dr_C", "💬 Consulte o Dr_C")}</h2>
+</div>
+""", unsafe_allow_html=True)
 
-# Campo de pergunta
-question = st.text_input(
-    T("Type your question:", "Digite sua pergunta:"),
-    placeholder=T(
-        "e.g.: How can forests generate sustainable profit?",
-        "Ex: Como a floresta pode gerar lucro sustentável?"
+# Input Section
+col1, col2 = st.columns([4, 1])
+
+with col1:
+    question = st.text_input(
+        T("Your question:", "Sua pergunta:"),
+        placeholder=T(
+            "e.g., How can forests generate sustainable profit?",
+            "Ex: Como as florestas podem gerar lucro sustentável?"
+        ),
+        label_visibility="collapsed"
     )
-)
 
-# Botão para perguntar
-if st.button(T("🌿 Ask", "🌿 Perguntar"), type="primary"):
-    if question.strip():
-        with st.spinner(T("Thinking...", "Pensando...")):
-            lang_code = "en" if is_english else "pt"
-            answer = ask_dr_c(question, pdf_content, lang_code)
-            
-            st.markdown(T("### 🌿 Dr_C's Response:", "### 🌿 Resposta do Dr_C:"))
-            st.write(answer)
-    else:
-        st.warning(T("Please type a question first!", "Digite uma pergunta primeiro!"))
+with col2:
+    st.write("")  # Spacer
+    ask_button = st.button(
+        T("🔬 Analyze", "🔬 Analisar"), 
+        type="primary", 
+        use_container_width=True
+    )
 
-# ================== EXEMPLOS ==================
-st.subheader("💡 Perguntas de exemplo")
-
-examples = [
-    "Como provar o valor econômico da floresta?",
-    "Quais projetos desenvolveu na Amazônia?",
-    "Como funciona o manejo sustentável?",
-    "Que espécies descobriu?"
-]
-
-for i, example in enumerate(examples):
-    if st.button(example, key=f"ex_{i}"):
-        # Simular clique com exemplo
-        with st.spinner("Pensando..."):
-            answer = ask_dr_c(example, pdf_content)
-            
-            st.markdown("### 🌿 Resposta do Dr_C:")
-            st.write(answer)
-
-# ================== INFORMAÇÕES DETALHADAS ==================
-st.sidebar.markdown("---")
-st.sidebar.markdown(T("### 🌿 About Charles Frewen", "### 🌿 Sobre Charles Frewen"))
-st.sidebar.write(T("""
-**Identity:** Anglo-Brazilian, Eton College graduate
-
-**Mission:** To economically prove the forest's value
-
-**Main Projects:**
-- Fruits of the Amazon
-- Flora Toucan Cipó Project  
-- Dr_C (AI for biodiversity)
-- ZYMZON (Amazon game)
-
-**Discoveries:** 1,200 catalogued species, 13 new discoveries
-""", """
-**Identidade:** Anglo-brasileiro, formado no Eton College
-
-**Missão:** Provar economicamente o valor da floresta
-
-**Projetos Principais:**
-- Fruits of the Amazon
-- Projeto Flora Toucan Cipó  
-- Dr_C (IA para biodiversidade)
-- ZYMZON (jogo Amazônia)
-
-**Descobertas:** 1.200 espécies catalogadas, 13 novas descobertas
-"""))
-
-if pdf_content:
-    word_count = len(pdf_content.split())
-    st.sidebar.write(T(f"📄 Words in database: {word_count}", f"📄 Palavras na base: {word_count}"))
+# ================== RESPONSE HANDLING ==================
+if ask_button and question.strip():
+    # Custom loading animation
+    loading_placeholder = st.empty()
+    loading_placeholder.markdown(f"""
+    <div class="thinking-animation">
+        <div class="thinking-dots">
+            <div class="thinking-dot"></div>
+            <div class="thinking-dot"></div>
+            <div class="thinking-dot"></div>
+        </div>
+        <span style="margin-left: 1rem; font-family: Inter; color: #2E8B57; font-weight: 500;">
+            {T("Dr_C is analyzing...", "Dr_C está analisando...")}
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
     
-st.sidebar.markdown("---")
-st.sidebar.markdown(T("### 💡 Characteristic Phrases", "### 💡 Frases Características"))
-st.sidebar.write(T("""
-*"The forest will only survive if it can generate profit sustainably"*
+    # Simulate thinking time for better UX
+    time.sleep(1)
+    
+    lang_code = "en" if is_english else "pt"
+    answer = ask_dr_c(question, pdf_content, lang_code)
+    
+    loading_placeholder.empty()
+    
+    # Professional Response Display
+    st.markdown(f"""
+    <div class="response-card">
+        <div class="response-header">
+            <div class="dr-c-avatar">🌿</div>
+            <h3 class="response-title">{T("Dr_C's Professional Analysis", "Análise Profissional do Dr_C")}</h3>
+        </div>
+        <div class="response-content">
+            {answer.replace(chr(10), '<br>')}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-*"To care for the forest, we need to care for those who live in it"*
+elif ask_button:
+    st.warning(T("Please enter your question", "Digite sua pergunta"))
 
-*"Planting trees is the cheapest and most effective life insurance there is"*
-""", """
-*"A floresta só vai sobreviver se puder gerar lucro de forma sustentável"*
+# ================== EXAMPLE QUESTIONS ==================
+st.markdown(f"""
+<div class="chat-container">
+    <h2 class="chat-title">{T("🎯 Expert Topics", "🎯 Tópicos Especialistas")}</h2>
+</div>
+""", unsafe_allow_html=True)
 
-*"Para cuidar da floresta, precisamos cuidar de quem vive nela"*
+if is_english:
+    examples = [
+        ("🌱", "Sustainable Forest Economics", "How can forests generate sustainable profit while preserving biodiversity?"),
+        ("🔬", "Species Discovery", "Tell me about your species cataloguing and the discovery of Pilosocereus frewenii"),
+        ("🏗️", "Amazon Projects", "Describe the Fruits of the Amazon project and its impact"),
+        ("🎮", "Technology Integration", "How does the ZYMZON project combine gaming with conservation?"),
+        ("👥", "Community Impact", "Why is caring for Amazon communities fundamental to conservation?"),
+        ("🌿", "Sustainable Management", "Explain your approach to sustainable forest management")
+    ]
+else:
+    examples = [
+        ("🌱", "Economia Florestal Sustentável", "Como as florestas podem gerar lucro sustentável preservando biodiversidade?"),
+        ("🔬", "Descoberta de Espécies", "Conte sobre sua catalogação de espécies e a descoberta do Pilosocereus frewenii"),
+        ("🏗️", "Projetos Amazônicos", "Descreva o projeto Fruits of the Amazon e seu impacto"),
+        ("🎮", "Integração Tecnológica", "Como o projeto ZYMZON combina jogos com conservação?"),
+        ("👥", "Impacto Comunitário", "Por que cuidar das comunidades amazônicas é fundamental para conservação?"),
+        ("🌿", "Manejo Sustentável", "Explique sua abordagem ao manejo florestal sustentável")
+    ]
 
-*"Plantar árvores é o seguro de vida mais barato e eficaz que existe"*
-"""))
+# Create example grid
+example_html = '<div class="example-grid">'
+for icon, title, text in examples:
+    example_html += f"""
+    <div class="example-card" onclick="document.querySelector('input').value='{text}'; document.querySelector('input').focus();">
+        <div class="example-icon">{icon}</div>
+        <h4 style="font-family: Inter; font-weight: 600; color: #1F4F2F; margin: 0.5rem 0;">{title}</h4>
+        <p class="example-text">{text}</p>
+    </div>
+    """
+example_html += '</div>'
 
-st.sidebar.markdown("---")
-st.sidebar.write(T("🔧 Avatar based on original PDF", "🔧 Avatar baseado no PDF original"))
+st.markdown(example_html, unsafe_allow_html=True)
+
+# ================== SIDEBAR PROFESSIONAL INFO ==================
+with st.sidebar:
+    st.markdown("---")
+    st.markdown(f"### {T('🎓 Professional Profile', '🎓 Perfil Profissional')}")
+    
+    profile_info = T("""
+    **Charles Frewen, Dr_C**
+    *Biodiversity Innovation Leader*
+    
+    📍 **Base:** Amazon Region, Brazil
+    🎓 **Education:** Eton College
+    🌍 **Citizenship:** Anglo-Brazilian
+    
+    **Specializations:**
+    • Sustainable Forest Economics
+    • Biodiversity Conservation  
+    • Community Development
+    • Technology Integration
+    
+    **Notable Achievements:**
+    • 1,200+ Species Catalogued
+    • 13 New Species Discovered
+    • Multiple Conservation Projects
+    • International Recognition
+    """, """
+    **Charles Frewen, Dr_C**
+    *Líder em Inovação de Biodiversidade*
+    
+    📍 **Base:** Região Amazônica, Brasil
+    🎓 **Formação:** Eton College
+    🌍 **Cidadania:** Anglo-Brasileira
+    
+    **Especializações:**
+    • Economia Florestal Sustentável
+    • Conservação da Biodiversidade
+    • Desenvolvimento Comunitário  
+    • Integração Tecnológica
+    
+    **Conquistas Notáveis:**
+    • 1.200+ Espécies Catalogadas
+    • 13 Novas Espécies Descobertas
+    • Múltiplos Projetos de Conservação
+    • Reconhecimento Internacional
+    """)
+    
+    st.markdown(profile_info)
+    
+    st.markdown("---")
+    st.markdown(f"**{T('System Status', 'Status do Sistema')}:** {api_status}")
+    st.markdown(f"**{T('Knowledge Base', 'Base de Conhecimento')}:** {status}")
+
+# ================== FOOTER ==================
+st.markdown("---")
+st.markdown(f"""
+<div style="text-align: center; padding: 2rem; font-family: Inter; color: #6B7280;">
+    <p style="margin: 0; font-size: 0.9rem;">
+        {T("Powered by Dr_C AI • Connecting Biodiversity, Technology & Sustainability", 
+           "Desenvolvido por Dr_C AI • Conectando Biodiversidade, Tecnologia e Sustentabilidade")}
+    </p>
+    <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; opacity: 0.7;">
+        {T("Professional conservation insights based on 30+ years of Amazon experience", 
+           "Insights profissionais de conservação baseados em 30+ anos de experiência amazônica")}
+    </p>
+</div>
+""", unsafe_allow_html=True)
