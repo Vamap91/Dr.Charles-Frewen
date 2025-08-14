@@ -6,12 +6,19 @@ import os
 # ================== CONFIG BÁSICA ==================
 st.set_page_config(page_title="Dr_C", page_icon="🌿")
 
+# Configuração de idioma
+lang = st.sidebar.radio("🌍 Language/Idioma", ["🇬🇧 English", "🇧🇷 Português"], index=1)
+is_english = lang.startswith("🇬🇧")
+
+def T(en, pt):
+    return en if is_english else pt
+
 # API Key
 try:
     openai.api_key = st.secrets["OPENAI_API_KEY"]
-    st.sidebar.success("✅ API configurada")
+    st.sidebar.success(T("✅ API configured", "✅ API configurada"))
 except:
-    st.error("❌ Configure OPENAI_API_KEY nos secrets")
+    st.error(T("❌ Configure OPENAI_API_KEY in secrets", "❌ Configure OPENAI_API_KEY nos secrets"))
     st.stop()
 
 # ================== TÍTULO ==================
@@ -24,7 +31,10 @@ def load_pdf():
     pdf_path = "Arquivo 1 FAISS.pdf"
     
     if not os.path.exists(pdf_path):
-        return None, "❌ Arquivo 'Arquivo 1 FAISS.pdf' não encontrado"
+        return None, T(
+            "❌ File 'Arquivo 1 FAISS.pdf' not found",
+            "❌ Arquivo 'Arquivo 1 FAISS.pdf' não encontrado"
+        )
     
     try:
         with open(pdf_path, "rb") as file:
@@ -33,16 +43,25 @@ def load_pdf():
             for page in reader.pages:
                 text += page.extract_text() + "\n"
         
-        return text, f"✅ PDF carregado: {len(text)} caracteres"
+        return text, T(
+            f"✅ PDF loaded: {len(text)} characters",
+            f"✅ PDF carregado: {len(text)} caracteres"
+        )
     except Exception as e:
-        return None, f"❌ Erro ao carregar PDF: {str(e)}"
+        return None, T(
+            f"❌ Error loading PDF: {str(e)}",
+            f"❌ Erro ao carregar PDF: {str(e)}"
+        )
 
 # Carregar conteúdo
 pdf_content, status = load_pdf()
 st.sidebar.write(status)
 
 if pdf_content is None:
-    st.error("Não foi possível carregar o PDF. Verifique se 'Arquivo 1 FAISS.pdf' está na raiz do repositório.")
+    st.error(T(
+        "Could not load PDF. Please check if 'Arquivo 1 FAISS.pdf' is in the repository root.",
+        "Não foi possível carregar o PDF. Verifique se 'Arquivo 1 FAISS.pdf' está na raiz do repositório."
+    ))
     st.stop()
 
 # ================== FUNÇÃO PRINCIPAL ==================
@@ -122,27 +141,31 @@ Responda como Charles Frewen, baseando-se na minha experiência documentada. Use
         return response.choices[0].message.content
         
     except Exception as e:
-        return f"Erro: {str(e)}"
+        return T(f"Error: {str(e)}", f"Erro: {str(e)}")
 
 # ================== INTERFACE ==================
-st.subheader("💬 Faça sua pergunta")
+st.subheader(T("💬 Ask your question", "💬 Faça sua pergunta"))
 
 # Campo de pergunta
 question = st.text_input(
-    "Digite sua pergunta:",
-    placeholder="Ex: Como a floresta pode gerar lucro sustentável?"
+    T("Type your question:", "Digite sua pergunta:"),
+    placeholder=T(
+        "e.g.: How can forests generate sustainable profit?",
+        "Ex: Como a floresta pode gerar lucro sustentável?"
+    )
 )
 
 # Botão para perguntar
-if st.button("🌿 Perguntar", type="primary"):
+if st.button(T("🌿 Ask", "🌿 Perguntar"), type="primary"):
     if question.strip():
-        with st.spinner("Pensando..."):
-            answer = ask_dr_c(question, pdf_content)
+        with st.spinner(T("Thinking...", "Pensando...")):
+            lang_code = "en" if is_english else "pt"
+            answer = ask_dr_c(question, pdf_content, lang_code)
             
-            st.markdown("### 🌿 Resposta do Dr_C:")
+            st.markdown(T("### 🌿 Dr_C's Response:", "### 🌿 Resposta do Dr_C:"))
             st.write(answer)
     else:
-        st.warning("Digite uma pergunta primeiro!")
+        st.warning(T("Please type a question first!", "Digite uma pergunta primeiro!"))
 
 # ================== EXEMPLOS ==================
 st.subheader("💡 Perguntas de exemplo")
@@ -165,8 +188,20 @@ for i, example in enumerate(examples):
 
 # ================== INFORMAÇÕES DETALHADAS ==================
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 🌿 Sobre Charles Frewen")
-st.sidebar.write("""
+st.sidebar.markdown(T("### 🌿 About Charles Frewen", "### 🌿 Sobre Charles Frewen"))
+st.sidebar.write(T("""
+**Identity:** Anglo-Brazilian, Eton College graduate
+
+**Mission:** To economically prove the forest's value
+
+**Main Projects:**
+- Fruits of the Amazon
+- Flora Toucan Cipó Project  
+- Dr_C (AI for biodiversity)
+- ZYMZON (Amazon game)
+
+**Discoveries:** 1,200 catalogued species, 13 new discoveries
+""", """
 **Identidade:** Anglo-brasileiro, formado no Eton College
 
 **Missão:** Provar economicamente o valor da floresta
@@ -178,21 +213,27 @@ st.sidebar.write("""
 - ZYMZON (jogo Amazônia)
 
 **Descobertas:** 1.200 espécies catalogadas, 13 novas descobertas
-""")
+"""))
 
 if pdf_content:
     word_count = len(pdf_content.split())
-    st.sidebar.write(f"📄 Palavras na base: {word_count}")
+    st.sidebar.write(T(f"📄 Words in database: {word_count}", f"📄 Palavras na base: {word_count}"))
     
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 💡 Frases Características")
-st.sidebar.write("""
+st.sidebar.markdown(T("### 💡 Characteristic Phrases", "### 💡 Frases Características"))
+st.sidebar.write(T("""
+*"The forest will only survive if it can generate profit sustainably"*
+
+*"To care for the forest, we need to care for those who live in it"*
+
+*"Planting trees is the cheapest and most effective life insurance there is"*
+""", """
 *"A floresta só vai sobreviver se puder gerar lucro de forma sustentável"*
 
 *"Para cuidar da floresta, precisamos cuidar de quem vive nela"*
 
 *"Plantar árvores é o seguro de vida mais barato e eficaz que existe"*
-""")
+"""))
 
 st.sidebar.markdown("---")
-st.sidebar.write("🔧 Avatar baseado no PDF original")
+st.sidebar.write(T("🔧 Avatar based on original PDF", "🔧 Avatar baseado no PDF original"))
