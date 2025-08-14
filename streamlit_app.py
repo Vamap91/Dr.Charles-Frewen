@@ -582,18 +582,12 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Input Section with auto-fill support
+# Input Section - simplified without auto-fill complexity
 col1, col2 = st.columns([4, 1])
 
 with col1:
-    # Check for auto-filled question
-    default_value = st.session_state.get('auto_question', '')
-    if default_value:
-        st.session_state.pop('auto_question', None)  # Clear after using
-    
     question = st.text_input(
         T("Your question:", "Sua pergunta:"),
-        value=default_value,
         placeholder=T(
             "e.g., How can forests generate sustainable profit?",
             "Ex: Como as florestas podem gerar lucro sustentável?"
