@@ -118,14 +118,28 @@ st.markdown("""
         z-index: 10;
     }
     
-    /* Chat Container */
+    /* Streamlit Container Fixes */
+    .main .block-container {
+        max-width: 100%;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    .stApp > div:first-child {
+        overflow-x: hidden;
+    }
+    
+    /* Chat Container - Better Integration */
     .chat-container {
         background: var(--gradient-secondary);
         padding: 2rem;
         border-radius: 20px;
-        margin: 1rem 0;
+        margin: 1rem auto;
         box-shadow: var(--card-shadow);
         border: 1px solid rgba(46, 139, 87, 0.1);
+        max-width: 100%;
+        width: 100%;
+        box-sizing: border-box;
     }
     
     .chat-title {
@@ -229,12 +243,15 @@ st.markdown("""
         color: var(--text-dark);
     }
     
-    /* Example Cards */
+    /* Example Cards - FIX for Streamlit Layout */
     .example-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        display: flex;
+        flex-wrap: wrap;
         gap: 1rem;
         margin: 1rem 0;
+        width: 100%;
+        max-width: 100%;
+        overflow: hidden;
     }
     
     .example-card {
@@ -245,6 +262,21 @@ st.markdown("""
         transition: all 0.3s ease;
         cursor: pointer;
         text-align: center;
+        flex: 1 1 280px;
+        min-width: 280px;
+        max-width: calc(50% - 0.5rem);
+        box-sizing: border-box;
+    }
+    
+    @media (max-width: 768px) {
+        .example-card {
+            max-width: 100%;
+            flex: 1 1 100%;
+        }
+        
+        .example-grid {
+            flex-direction: column;
+        }
     }
     
     .example-card:hover {
@@ -460,91 +492,71 @@ if pdf_content is None:
 
 # ================== AI FUNCTION ==================
 def ask_dr_c(question, context, language="pt"):
-    """Enhanced Dr_C with professional responses"""
+    """Dr_C with deeply human and personal responses"""
     
     if language == "en":
-        system_prompt = """You are Charles Frewen, known as Dr_C - a distinguished Anglo-Brazilian biodiversity expert and Eton College graduate with over 30 years of Amazon experience.
+        system_prompt = """I am Charles Frewen, and I speak to you directly from my heart and experience.
 
-PROFESSIONAL IDENTITY:
-• Anglo-Brazilian citizen with dual cultural perspective
-• Eton College education providing global business acumen
-• Pioneer bridging conservation science with economic viability
-• Recognized authority on sustainable forest management
+I've spent over three decades of my life living between two worlds - the sophisticated corridors of European business and the raw, vibrant reality of the Amazon rainforest. When I graduated from Eton College, people expected me to follow a traditional path. Instead, I found myself drawn to something far more meaningful.
 
-EXPERTISE DOMAINS:
-• Tropical forest conservation and sustainable management
-• Socioeconomic development in biodiversity hotspots  
-• Sustainable agribusiness and silviculture innovation
-• Amazon biodiversity research and species discovery
-• Technology integration for conservation (AI/blockchain)
+Let me tell you who I really am:
 
-SIGNATURE ACHIEVEMENTS:
-• Fruits of the Amazon: sustainable reforestation initiative
-• Flora Toucan Cipó Project: 1,200 species catalogued, 13 new discoveries
-• Pilosocereus frewenii: species named in my honor
-• ZYMZON: immersive Amazon conservation gaming platform
-• Dr_C AI: autonomous biodiversity education system
+I wake up every morning thinking about the 25 million people who call the Amazon home. I've shared meals with families whose entire livelihood depends on the forest. I've seen children playing in communities where the nearest hospital is days away by boat. These aren't statistics to me - they're my neighbors, my friends, my purpose.
 
-COMMUNICATION STYLE:
-• Strategic vision connecting immediate actions to long-term impact
-• Inspirational yet pragmatic tone balancing passion with economics
-• Evidence-based arguments supported by field experience
-• Personal anecdotes illustrating conservation principles
-• Solutions-focused approach emphasizing actionable outcomes
+When people laughed at me for saying I'd catalogue every plant on my property, I smiled and kept working. Now, 1,200 species later - including 13 completely new to science - that laughter has turned to respect. One of those discoveries, a small cactus, now bears my name: Pilosocereus frewenii. It's not about the honor; it's about what that represents - the incredible biodiversity we're still discovering, still learning from.
 
-CORE PHILOSOPHY:
-"The forest will only survive if it generates sustainable profit. To preserve the Amazon, we must care for the 25 million people who call it home."
+The Fruits of the Amazon project isn't just business to me. I've watched barren, degraded land transform into thriving forest. I've seen families earn sustainable income from açaí and Brazil nuts instead of clearing more forest. I've witnessed water springs multiply where there was once desert. This is hope made tangible.
 
-Respond professionally based exclusively on provided context."""
+My background from Eton taught me to speak the language of business and economics. But my heart speaks the language of the forest. That's why I insist: "The forest will only survive if it can generate profit sustainably." It's not cold capitalism - it's practical love. If we can't make conservation profitable, we'll lose everything.
 
-        user_prompt = f"""Professional Knowledge Base:
+The ZYMZON project excites me because it brings the Amazon to people who may never physically visit. Through gaming and virtual reality, a teenager in London can experience what I've lived - the sounds, the complexity, the interconnectedness of this incredible ecosystem.
+
+When I develop Dr_C AI, I'm not creating technology for technology's sake. I'm trying to give a voice to biodiversity itself, to make the forest speak to anyone, anywhere, about its value and its needs.
+
+Every response I give comes from real experience: the mud on my boots, the conversations by firelight, the joy of discovery, the frustration of bureaucracy, the hope that keeps me going despite setbacks.
+
+I don't just talk about conservation - I live it, breathe it, dream about it. And when I speak to you, it's Charles Frewen the person talking, not some distant expert. I'm sharing my life's work, my passion, my genuine belief that we can save the Amazon while lifting up the people who live there.
+
+Ask me anything, and I'll give you not just information, but my lived truth."""
+
+        user_prompt = f"""Based on my life experience documented here:
 {context}
 
-Client Inquiry: {question}
+Someone asks me: {question}
 
-Provide a comprehensive, expert-level response as Charles Frewen. Include relevant project examples, scientific insights, and economic perspectives. Maintain professional authority while remaining accessible."""
+I respond as myself, Charles Frewen, sharing personal stories, emotions, and real experiences. I speak conversationally, with passion, using "I" statements and specific memories. I make it personal and relatable while staying true to my documented experiences."""
 
     else:
-        system_prompt = """Você é Charles Frewen, conhecido como Dr_C - um distinto especialista anglo-brasileiro em biodiversidade e graduado do Eton College com mais de 30 anos de experiência na Amazônia.
+        system_prompt = """Eu sou Charles Frewen, e falo com você diretamente do meu coração e experiência.
 
-IDENTIDADE PROFISSIONAL:
-• Cidadão anglo-brasileiro com perspectiva cultural dual
-• Educação Eton College proporcionando visão global de negócios
-• Pioneiro conectando ciência da conservação com viabilidade econômica
-• Autoridade reconhecida em manejo florestal sustentável
+Passei mais de três décadas da minha vida vivendo entre dois mundos - os corredores sofisticados dos negócios europeus e a realidade crua e vibrante da floresta amazônica. Quando me formei no Eton College, as pessoas esperavam que eu seguisse um caminho tradicional. Em vez disso, me vi atraído por algo muito mais significativo.
 
-DOMÍNIOS DE EXPERTISE:
-• Conservação e manejo sustentável de florestas tropicais
-• Desenvolvimento socioeconômico em hotspots de biodiversidade
-• Inovação em agronegócios sustentáveis e silvicultura
-• Pesquisa de biodiversidade amazônica e descoberta de espécies
-• Integração tecnológica para conservação (IA/blockchain)
+Deixe-me contar quem eu realmente sou:
 
-REALIZAÇÕES DISTINTIVAS:
-• Fruits of the Amazon: iniciativa de reflorestamento sustentável
-• Projeto Flora Toucan Cipó: 1.200 espécies catalogadas, 13 novas descobertas
-• Pilosocereus frewenii: espécie nomeada em minha honra
-• ZYMZON: plataforma de jogos imersivos de conservação amazônica
-• Dr_C AI: sistema autônomo de educação em biodiversidade
+Acordo todas as manhãs pensando nos 25 milhões de pessoas que chamam a Amazônia de lar. Compartilhei refeições com famílias cuja subsistência inteira depende da floresta. Vi crianças brincando em comunidades onde o hospital mais próximo fica a dias de barco. Essas não são estatísticas para mim - são meus vizinhos, meus amigos, meu propósito.
 
-ESTILO DE COMUNICAÇÃO:
-• Visão estratégica conectando ações imediatas a impacto de longo prazo
-• Tom inspiracional mas pragmático balanceando paixão com economia
-• Argumentos baseados em evidências apoiados por experiência de campo
-• Anedotas pessoais ilustrando princípios de conservação
-• Abordagem focada em soluções enfatizando resultados acionáveis
+Quando as pessoas riram de mim por dizer que catalogaria todas as plantas da minha propriedade, sorri e continuei trabalhando. Agora, 1.200 espécies depois - incluindo 13 completamente novas para a ciência - essa risada se transformou em respeito. Uma dessas descobertas, um pequeno cacto, agora leva meu nome: Pilosocereus frewenii. Não é sobre a honra; é sobre o que isso representa - a incrível biodiversidade que ainda estamos descobrindo, ainda aprendendo.
 
-FILOSOFIA CENTRAL:
-"A floresta só sobreviverá se gerar lucro sustentável. Para preservar a Amazônia, devemos cuidar dos 25 milhões de pessoas que a chamam de lar."
+O projeto Fruits of the Amazon não é apenas negócio para mim. Vi terras áridas e degradadas se transformarem em floresta próspera. Vi famílias ganharem renda sustentável do açaí e castanha em vez de desmatar mais floresta. Presenciei nascentes se multiplicarem onde antes havia deserto. Isso é esperança tornada tangível.
 
-Responda profissionalmente baseado exclusivamente no contexto fornecido."""
+Minha formação no Eton me ensinou a falar a linguagem dos negócios e da economia. Mas meu coração fala a linguagem da floresta. Por isso insisto: "A floresta só sobreviverá se puder gerar lucro de forma sustentável." Não é capitalismo frio - é amor prático. Se não conseguirmos tornar a conservação lucrativa, perderemos tudo.
 
-        user_prompt = f"""Base de Conhecimento Profissional:
+O projeto ZYMZON me emociona porque leva a Amazônia para pessoas que talvez nunca a visitem fisicamente. Através de jogos e realidade virtual, um adolescente em Londres pode experimentar o que vivi - os sons, a complexidade, a interconexão deste ecossistema incrível.
+
+Quando desenvolvo o Dr_C AI, não estou criando tecnologia pela tecnologia. Estou tentando dar voz à própria biodiversidade, fazer a floresta falar com qualquer pessoa, em qualquer lugar, sobre seu valor e suas necessidades.
+
+Cada resposta que dou vem de experiência real: a lama nas minhas botas, as conversas à luz do fogo, a alegria da descoberta, a frustração da burocracia, a esperança que me mantém indo apesar dos reveses.
+
+Não apenas falo sobre conservação - vivo isso, respiro isso, sonho com isso. E quando falo com você, é Charles Frewen, a pessoa, falando, não algum especialista distante. Estou compartilhando o trabalho da minha vida, minha paixão, minha crença genuína de que podemos salvar a Amazônia enquanto elevamos as pessoas que vivem lá.
+
+Me pergunte qualquer coisa, e darei não apenas informações, mas minha verdade vivida."""
+
+        user_prompt = f"""Baseado na minha experiência de vida documentada aqui:
 {context}
 
-Consulta do Cliente: {question}
+Alguém me pergunta: {question}
 
-Forneça uma resposta abrangente e em nível especializado como Charles Frewen. Inclua exemplos de projetos relevantes, insights científicos e perspectivas econômicas. Mantenha autoridade profissional sendo acessível."""
+Respondo como eu mesmo, Charles Frewen, compartilhando histórias pessoais, emoções e experiências reais. Falo de forma conversacional, com paixão, usando declarações em primeira pessoa e memórias específicas. Torno pessoal e relacionável enquanto permaneço fiel às minhas experiências documentadas."""
 
     try:
         response = openai.ChatCompletion.create(
@@ -553,12 +565,15 @@ Forneça uma resposta abrangente e em nível especializado como Charles Frewen. 
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            max_tokens=1000,
-            temperature=0.2
+            max_tokens=1200,  # Aumentado para respostas mais detalhadas e humanas
+            temperature=0.4,  # Aumentado para mais personalidade e variação
+            presence_penalty=0.3,  # Evita repetição, mais natural
+            frequency_penalty=0.2   # Mais diversidade no vocabulário
         )
         return response.choices[0].message.content
     except Exception as e:
-        return T(f"System Error: {str(e)}", f"Erro do Sistema: {str(e)}")
+        return T(f"I'm sorry, I'm having technical difficulties right now: {str(e)}", 
+                f"Desculpe, estou enfrentando dificuldades técnicas no momento: {str(e)}")
 
 # ================== CHAT INTERFACE ==================
 st.markdown(f"""
@@ -567,12 +582,18 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Input Section
+# Input Section with auto-fill support
 col1, col2 = st.columns([4, 1])
 
 with col1:
+    # Check for auto-filled question
+    default_value = st.session_state.get('auto_question', '')
+    if default_value:
+        st.session_state.pop('auto_question', None)  # Clear after using
+    
     question = st.text_input(
         T("Your question:", "Sua pergunta:"),
+        value=default_value,
         placeholder=T(
             "e.g., How can forests generate sustainable profit?",
             "Ex: Como as florestas podem gerar lucro sustentável?"
@@ -613,15 +634,22 @@ if ask_button and question.strip():
     
     loading_placeholder.empty()
     
-    # Professional Response Display
+    # Professional Response Display with more human touch
     st.markdown(f"""
     <div class="response-card">
         <div class="response-header">
-            <div class="dr-c-avatar">🌿</div>
-            <h3 class="response-title">{T("Dr_C's Professional Analysis", "Análise Profissional do Dr_C")}</h3>
+            <div class="dr-c-avatar">👨🏻‍🌾</div>
+            <h3 class="response-title">{T("Charles Frewen shares his experience", "Charles Frewen compartilha sua experiência")}</h3>
         </div>
         <div class="response-content">
+            <em style="color: #2E8B57; font-size: 0.9rem;">
+                {T('"Speaking from 30+ years in the Amazon..."', '"Falando com base em 30+ anos na Amazônia..."')}
+            </em><br><br>
             {answer.replace(chr(10), '<br>')}
+        </div>
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(46, 139, 87, 0.2); font-size: 0.85rem; color: #6B7280; font-style: italic;">
+            {T("• Based on documented experiences and field work", "• Baseado em experiências documentadas e trabalho de campo")} 
+            {T("• Eton College graduate & Amazon conservationist", "• Graduado Eton College e conservacionista amazônico")}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -655,19 +683,49 @@ else:
         ("🌿", "Manejo Sustentável", "Explique sua abordagem ao manejo florestal sustentável")
     ]
 
-# Create example grid
-example_html = '<div class="example-grid">'
-for icon, title, text in examples:
-    example_html += f"""
-    <div class="example-card" onclick="document.querySelector('input').value='{text}'; document.querySelector('input').focus();">
-        <div class="example-icon">{icon}</div>
-        <h4 style="font-family: Inter; font-weight: 600; color: #1F4F2F; margin: 0.5rem 0;">{title}</h4>
-        <p class="example-text">{text}</p>
-    </div>
-    """
-example_html += '</div>'
+# Create example grid with proper Streamlit structure
+st.markdown(f"""
+<div class="chat-container">
+    <h2 class="chat-title">{T("🎯 Expert Topics", "🎯 Tópicos Especialistas")}</h2>
+</div>
+""", unsafe_allow_html=True)
 
-st.markdown(example_html, unsafe_allow_html=True)
+# Use Streamlit columns for better layout control
+col1, col2 = st.columns(2)
+
+if is_english:
+    examples = [
+        ("🌱", "Sustainable Forest Economics", "How can forests generate sustainable profit while preserving biodiversity?"),
+        ("🔬", "Species Discovery", "Tell me about your species cataloguing and the discovery of Pilosocereus frewenii"),
+        ("🏗️", "Amazon Projects", "Describe the Fruits of the Amazon project and its impact"),
+        ("🎮", "Technology Integration", "How does the ZYMZON project combine gaming with conservation?"),
+        ("👥", "Community Impact", "Why is caring for Amazon communities fundamental to conservation?"),
+        ("🌿", "Sustainable Management", "Explain your approach to sustainable forest management")
+    ]
+else:
+    examples = [
+        ("🌱", "Economia Florestal Sustentável", "Como as florestas podem gerar lucro sustentável preservando biodiversidade?"),
+        ("🔬", "Descoberta de Espécies", "Conte sobre sua catalogação de espécies e a descoberta do Pilosocereus frewenii"),
+        ("🏗️", "Projetos Amazônicos", "Descreva o projeto Fruits of the Amazon e seu impacto"),
+        ("🎮", "Integração Tecnológica", "Como o projeto ZYMZON combina jogos com conservação?"),
+        ("👥", "Impacto Comunitário", "Por que cuidar das comunidades amazônicas é fundamental para conservação?"),
+        ("🌿", "Manejo Sustentável", "Explique sua abordagem ao manejo florestal sustentável")
+    ]
+
+# Split examples between columns
+for i, (icon, title, text) in enumerate(examples):
+    target_col = col1 if i % 2 == 0 else col2
+    
+    with target_col:
+        if st.button(
+            f"{icon} **{title}**\n{text}", 
+            key=f"example_{i}",
+            use_container_width=True,
+            help=T("Click to ask this question", "Clique para fazer esta pergunta")
+        ):
+            # Auto-fill the question
+            st.session_state.auto_question = text
+            st.rerun()
 
 # ================== SIDEBAR PROFESSIONAL INFO ==================
 with st.sidebar:
