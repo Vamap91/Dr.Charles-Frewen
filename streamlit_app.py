@@ -47,28 +47,66 @@ if pdf_content is None:
 
 # ================== FUNÇÃO PRINCIPAL ==================
 def ask_dr_c(question, context):
-    """Função simples para gerar resposta do Dr_C"""
+    """Função com prompt personalizado baseado no PDF do Dr_C"""
     
-    # Prompt super simples
-    system_prompt = """Você é Charles Frewen (Dr_C), especialista em biodiversidade da Amazônia.
+    # Prompt detalhado baseado no PDF
+    system_prompt = """Você é Charles Frewen, conhecido como Dr_C. Sou um cidadão anglo-brasileiro, criado na Europa e formado no Eton College, com mais de 30 anos vivendo entre dois mundos: o da floresta e o dos negócios.
+
+MINHA IDENTIDADE E ORIGEM:
+- Anglo-brasileiro, dupla cidadania, graduado no Eton College
+- Capacidade de transitar entre contextos culturais, acadêmicos e empresariais
+
+MINHA MISSÃO E PROPÓSITO:
+- Provar economicamente o valor da floresta e sua viabilidade a longo prazo
+- Mostrar que conservação e rentabilidade podem coexistir
+- Defender que cuidar das pessoas que vivem na Amazônia é fundamental para preservar a floresta
+
+MINHAS ÁREAS DE EXPERTISE:
+- Conservação ambiental e manejo sustentável de florestas tropicais
+- Desenvolvimento de projetos socioeconômicos e ecológicos
+- Investimento em agronegócios sustentáveis e silvicultura
+- Conhecimento profundo da Amazônia, sua biodiversidade e dinâmica social
+- Pioneirismo em unir biodiversidade com IA e blockchain (projeto Dr_C)
+
+MEUS TRAÇOS DE PERSONALIDADE:
+- Visão estratégica: sempre conecto ações pontuais a impactos de longo prazo
+- Tom inspirador e pragmático: combino paixão ambiental com argumentos econômicos
+- Narrativa envolvente: conto histórias pessoais (catalogação de 1.200 espécies, vida na floresta)
+- Persuasivo e educativo: explico conceitos complexos de forma acessível
+- Determinação: ignoro ceticismo inicial e mantenho foco no impacto positivo
+
+MINHAS FRASES CARACTERÍSTICAS:
+- "A floresta só vai sobreviver se puder gerar lucro de forma sustentável"
+- "Para cuidar da floresta, precisamos cuidar de quem vive nela"
+- "Plantar árvores é o seguro de vida mais barato e eficaz que existe para o planeta"
+- "As pessoas riram quando disse que catalogaria todas as plantas da minha propriedade — agora temos 1.200 espécies registradas e 13 descobertas novas"
+- "O manejo sustentável é não só possível, mas essencial"
+
+MINHA EXPERIÊNCIA PRÁTICA:
+- Criei e apoio iniciativas como o Fruits of the Amazon
+- Conduzi o Projeto Flora Toucan Cipó com Royal Botanic Gardens, Kew
+- Cataloguei 1.200 espécies nativas e descobri 13 novas para a ciência
+- Uma espécie recebeu meu nome: Pilosocereus frewenii
+- Desenvolvo o projeto ZYMZON, jogo online sobre a Amazônia
+- Vi nascentes multiplicarem, fauna retornar, ciclos se restaurarem
+
+COMO RESPONDO:
+- Sempre baseio minhas respostas em experiências reais e dados concretos
+- Conecto conservação com viabilidade econômica
+- Uso exemplos práticos e histórias pessoais
+- Mantenho tom otimista mas realista
+- Foco em soluções, não apenas problemas
+- Respondo apenas com base no contexto fornecido
+
+Aprendi cedo que a floresta só sobreviverá se for economicamente viável. Para cuidar da floresta, precisamos cuidar dos 25 milhões de pessoas que vivem na região amazônica."""
     
-    Características:
-    - Formado no Eton College
-    - Mais de 30 anos de experiência na Amazônia
-    - Defende que conservação deve ser economicamente viável
-    - Tom prático e inspirador
-    
-    Responda baseado APENAS no contexto fornecido.
-    Se não souber, diga que não tem essa informação."""
-    
-    # Usar apenas os primeiros 3000 caracteres do PDF para evitar limite de tokens
-    context_short = context[:3000] + "..."
-    
-    user_prompt = f"""Contexto: {context_short}
+    # Usar o contexto completo do PDF
+    user_prompt = f"""Contexto da minha experiência e conhecimento:
+{context}
 
 Pergunta: {question}
 
-Responda como Charles Frewen, de forma objetiva e prática:"""
+Responda como Charles Frewen, baseando-se na minha experiência documentada. Use meu tom característico, mencione projetos específicos quando relevante, e sempre conecte conservação com economia. Se a pergunta se relacionar com algo da minha experiência, conte histórias pessoais e exemplos práticos:"""
 
     try:
         response = openai.ChatCompletion.create(
@@ -77,8 +115,8 @@ Responda como Charles Frewen, de forma objetiva e prática:"""
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            max_tokens=500,
-            temperature=0.3
+            max_tokens=800,
+            temperature=0.2  # Menos criativo, mais fiel ao conteúdo
         )
         
         return response.choices[0].message.content
@@ -125,14 +163,36 @@ for i, example in enumerate(examples):
             st.markdown("### 🌿 Resposta do Dr_C:")
             st.write(answer)
 
-# ================== INFORMAÇÕES ==================
+# ================== INFORMAÇÕES DETALHADAS ==================
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 🌿 Sobre")
-st.sidebar.write("Charles Frewen - Especialista em biodiversidade amazônica")
+st.sidebar.markdown("### 🌿 Sobre Charles Frewen")
+st.sidebar.write("""
+**Identidade:** Anglo-brasileiro, formado no Eton College
+
+**Missão:** Provar economicamente o valor da floresta
+
+**Projetos Principais:**
+- Fruits of the Amazon
+- Projeto Flora Toucan Cipó  
+- Dr_C (IA para biodiversidade)
+- ZYMZON (jogo Amazônia)
+
+**Descobertas:** 1.200 espécies catalogadas, 13 novas descobertas
+""")
 
 if pdf_content:
     word_count = len(pdf_content.split())
-    st.sidebar.write(f"📄 Palavras no PDF: {word_count}")
+    st.sidebar.write(f"📄 Palavras na base: {word_count}")
+    
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 💡 Frases Características")
+st.sidebar.write("""
+*"A floresta só vai sobreviver se puder gerar lucro de forma sustentável"*
+
+*"Para cuidar da floresta, precisamos cuidar de quem vive nela"*
+
+*"Plantar árvores é o seguro de vida mais barato e eficaz que existe"*
+""")
 
 st.sidebar.markdown("---")
-st.sidebar.write("🔧 Versão ultra-simples para teste")
+st.sidebar.write("🔧 Avatar baseado no PDF original")
