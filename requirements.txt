@@ -1,3 +1,31 @@
+# ================== DR_C PROFESSIONAL AVATAR REQUIREMENTS ==================
+# Versão simplificada e otimizada para UX profissional
+
+# Core Framework
 streamlit==1.36.0
+
+# PDF Processing
 pypdf==4.2.0
+
+# AI/ML
 openai==0.28.1
+
+# ================== DEPENDÊNCIAS REMOVIDAS ==================
+# Removidas para simplificar e focar no essencial:
+# - faiss-cpu (não estamos mais usando busca vetorial)
+# - numpy (não necessário sem FAISS)
+# - tiktoken (não estamos fazendo chunking)
+# - plotly (não estamos usando gráficos)
+# - pandas (não estamos fazendo análises)
+# - matplotlib (não estamos criando plots)
+# - wordcloud (não estamos usando nuvem de palavras)
+
+# ================== FUNCIONALIDADES ATUAIS ==================
+# ✅ Interface UX profissional com CSS avançado
+# ✅ Sistema bilíngue (PT/EN)
+# ✅ Chat com Dr_C usando prompt personalizado
+# ✅ Carregamento completo do PDF
+# ✅ Animações e transições suaves
+# ✅ Design responsivo
+# ✅ Status dashboard
+# ✅ Cards de exemplo interativos
