@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ================== CSS PROFISSIONAL ==================
+# ================== CSS PROFISSIONAL LIMPO ==================
 st.markdown("""
 <style>
     /* Import Google Fonts */
@@ -37,6 +37,7 @@ st.markdown("""
         padding-top: 0rem;
         padding-left: 1rem;
         padding-right: 1rem;
+        max-width: 100%;
     }
     
     /* Custom Header */
@@ -110,26 +111,38 @@ st.markdown("""
         100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
     }
     
-    /* Language Selector */
-    .language-selector {
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-        z-index: 10;
+    /* Status Cards */
+    .status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin: 1rem 0;
     }
     
-    /* Streamlit Container Fixes */
-    .main .block-container {
-        max-width: 100%;
-        padding-left: 1rem;
-        padding-right: 1rem;
+    .status-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 15px;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        border-top: 4px solid var(--primary-green);
     }
     
-    .stApp > div:first-child {
-        overflow-x: hidden;
+    .status-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-green);
+        margin: 0;
     }
     
-    /* Chat Container - Better Integration */
+    .status-label {
+        font-size: 0.9rem;
+        color: var(--text-light);
+        margin: 0.5rem 0 0 0;
+        font-weight: 500;
+    }
+    
+    /* Chat Container */
     .chat-container {
         background: var(--gradient-secondary);
         padding: 2rem;
@@ -243,97 +256,6 @@ st.markdown("""
         color: var(--text-dark);
     }
     
-    /* Example Cards - FIX for Streamlit Layout */
-    .example-grid {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
-        margin: 1rem 0;
-        width: 100%;
-        max-width: 100%;
-        overflow: hidden;
-    }
-    
-    .example-card {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 15px;
-        border: 2px solid rgba(46, 139, 87, 0.1);
-        transition: all 0.3s ease;
-        cursor: pointer;
-        text-align: center;
-        flex: 1 1 280px;
-        min-width: 280px;
-        max-width: calc(50% - 0.5rem);
-        box-sizing: border-box;
-    }
-    
-    @media (max-width: 768px) {
-        .example-card {
-            max-width: 100%;
-            flex: 1 1 100%;
-        }
-        
-        .example-grid {
-            flex-direction: column;
-        }
-    }
-    
-    .example-card:hover {
-        border-color: var(--primary-green);
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(46, 139, 87, 0.2);
-    }
-    
-    .example-icon {
-        font-size: 2rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .example-text {
-        font-family: 'Inter', sans-serif;
-        font-size: 0.95rem;
-        font-weight: 500;
-        color: var(--text-dark);
-        margin: 0;
-    }
-    
-    /* Sidebar Styling */
-    .css-1d391kg {
-        background: var(--gradient-secondary);
-    }
-    
-    /* Status Cards */
-    .status-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        margin: 1rem 0;
-    }
-    
-    .status-card {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 15px;
-        text-align: center;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        border-top: 4px solid var(--primary-green);
-    }
-    
-    .status-value {
-        font-size: 2rem;
-        font-weight: 700;
-        color: var(--primary-green);
-        margin: 0;
-    }
-    
-    .status-label {
-        font-size: 0.9rem;
-        color: var(--text-light);
-        margin: 0.5rem 0 0 0;
-        font-weight: 500;
-    }
-    
     /* Loading Animation */
     .thinking-animation {
         display: flex;
@@ -413,7 +335,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ================== CONFIGURAÇÃO DE IDIOMA ==================
-# Sidebar compacta para idioma
 with st.sidebar:
     st.markdown("### 🌍 Language")
     lang = st.radio("", ["🇬🇧 English", "🇧🇷 Português"], index=1, label_visibility="collapsed")
@@ -565,10 +486,10 @@ Respondo como eu mesmo, Charles Frewen, compartilhando histórias pessoais, emo�
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            max_tokens=1200,  # Aumentado para respostas mais detalhadas e humanas
-            temperature=0.4,  # Aumentado para mais personalidade e variação
-            presence_penalty=0.3,  # Evita repetição, mais natural
-            frequency_penalty=0.2   # Mais diversidade no vocabulário
+            max_tokens=1200,
+            temperature=0.4,
+            presence_penalty=0.3,
+            frequency_penalty=0.2
         )
         return response.choices[0].message.content
     except Exception as e:
@@ -582,7 +503,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Input Section - simplified without auto-fill complexity
+# Input Section
 col1, col2 = st.columns([4, 1])
 
 with col1:
@@ -650,76 +571,6 @@ if ask_button and question.strip():
 
 elif ask_button:
     st.warning(T("Please enter your question", "Digite sua pergunta"))
-
-# ================== EXAMPLE QUESTIONS ==================
-st.markdown(f"""
-<div class="chat-container">
-    <h2 class="chat-title">{T("🎯 Expert Topics", "🎯 Tópicos Especialistas")}</h2>
-</div>
-""", unsafe_allow_html=True)
-
-if is_english:
-    examples = [
-        ("🌱", "Sustainable Forest Economics", "How can forests generate sustainable profit while preserving biodiversity?"),
-        ("🔬", "Species Discovery", "Tell me about your species cataloguing and the discovery of Pilosocereus frewenii"),
-        ("🏗️", "Amazon Projects", "Describe the Fruits of the Amazon project and its impact"),
-        ("🎮", "Technology Integration", "How does the ZYMZON project combine gaming with conservation?"),
-        ("👥", "Community Impact", "Why is caring for Amazon communities fundamental to conservation?"),
-        ("🌿", "Sustainable Management", "Explain your approach to sustainable forest management")
-    ]
-else:
-    examples = [
-        ("🌱", "Economia Florestal Sustentável", "Como as florestas podem gerar lucro sustentável preservando biodiversidade?"),
-        ("🔬", "Descoberta de Espécies", "Conte sobre sua catalogação de espécies e a descoberta do Pilosocereus frewenii"),
-        ("🏗️", "Projetos Amazônicos", "Descreva o projeto Fruits of the Amazon e seu impacto"),
-        ("🎮", "Integração Tecnológica", "Como o projeto ZYMZON combina jogos com conservação?"),
-        ("👥", "Impacto Comunitário", "Por que cuidar das comunidades amazônicas é fundamental para conservação?"),
-        ("🌿", "Manejo Sustentável", "Explique sua abordagem ao manejo florestal sustentável")
-    ]
-
-# Create example grid with proper Streamlit structure
-st.markdown(f"""
-<div class="chat-container">
-    <h2 class="chat-title">{T("🎯 Expert Topics", "🎯 Tópicos Especialistas")}</h2>
-</div>
-""", unsafe_allow_html=True)
-
-# Use Streamlit columns for better layout control
-col1, col2 = st.columns(2)
-
-if is_english:
-    examples = [
-        ("🌱", "Sustainable Forest Economics", "How can forests generate sustainable profit while preserving biodiversity?"),
-        ("🔬", "Species Discovery", "Tell me about your species cataloguing and the discovery of Pilosocereus frewenii"),
-        ("🏗️", "Amazon Projects", "Describe the Fruits of the Amazon project and its impact"),
-        ("🎮", "Technology Integration", "How does the ZYMZON project combine gaming with conservation?"),
-        ("👥", "Community Impact", "Why is caring for Amazon communities fundamental to conservation?"),
-        ("🌿", "Sustainable Management", "Explain your approach to sustainable forest management")
-    ]
-else:
-    examples = [
-        ("🌱", "Economia Florestal Sustentável", "Como as florestas podem gerar lucro sustentável preservando biodiversidade?"),
-        ("🔬", "Descoberta de Espécies", "Conte sobre sua catalogação de espécies e a descoberta do Pilosocereus frewenii"),
-        ("🏗️", "Projetos Amazônicos", "Descreva o projeto Fruits of the Amazon e seu impacto"),
-        ("🎮", "Integração Tecnológica", "Como o projeto ZYMZON combina jogos com conservação?"),
-        ("👥", "Impacto Comunitário", "Por que cuidar das comunidades amazônicas é fundamental para conservação?"),
-        ("🌿", "Manejo Sustentável", "Explique sua abordagem ao manejo florestal sustentável")
-    ]
-
-# Split examples between columns
-for i, (icon, title, text) in enumerate(examples):
-    target_col = col1 if i % 2 == 0 else col2
-    
-    with target_col:
-        if st.button(
-            f"{icon} **{title}**\n{text}", 
-            key=f"example_{i}",
-            use_container_width=True,
-            help=T("Click to ask this question", "Clique para fazer esta pergunta")
-        ):
-            # Auto-fill the question
-            st.session_state.auto_question = text
-            st.rerun()
 
 # ================== SIDEBAR PROFESSIONAL INFO ==================
 with st.sidebar:
